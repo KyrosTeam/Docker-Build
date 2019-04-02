@@ -1,67 +1,27 @@
 pipeline {
-  agent none
+  agent { label 'docker' }
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '5'))
+  }
+  triggers {
+    cron('@daily')
+  }
   stages {
-    stage('Fetch dependencies') {
-      agent {
-        docker 'circleci/node:9.3-stretch-browsers'
-      }
+    stage('Build') {
       steps {
-        sh 'yarn'
-        stash includes: 'node_modules/', name: 'node_modules'
+        sh 'docker build -f "Dockerfile-terraform" -t brightbox/terraform:latest .'
+        sh 'docker build -f "Dockerfile-cli" -t brightbox/cli:latest .'
       }
     }
-    stage('Lint') {
-      agent {
-        docker 'circleci/node:9.3-stretch-browsers'
+    stage('Publish') {
+      when {
+        branch 'master'
       }
       steps {
-        unstash 'node_modules'
-        sh 'yarn lint'
-      }
-    }
-    stage('Unit Test') {
-      agent {
-        docker 'circleci/node:9.3-stretch-browsers'
-      }
-      steps {
-        unstash 'node_modules'
-        sh 'yarn test:ci'
-        junit 'reports/**/*.xml'
-      }
-    }
-    stage('E2E Test') {
-      agent {
-        docker 'circleci/node:9.3-stretch-browsers'
-      }
-      steps {
-        unstash 'node_modules'
-        sh 'mkdir -p reports'
-        sh 'yarn e2e:pre-ci'
-        sh 'yarn e2e:ci'
-        sh 'yarn e2e:post-ci'
-        junit 'reports/**/*.xml'
-      }
-    }
-    stage('Compile') {
-      agent {
-        docker 'circleci/node:9.3-stretch-browsers'
-      }
-      steps {
-        unstash 'node_modules'
-        sh 'yarn build:prod'
-        stash includes: 'dist/', name: 'dist'
-      }
-    }
-    stage('Build and Push Docker Image') {
-      agent any
-      environment {
-        DOCKER_PUSH = credentials('docker_push')
-      }
-      steps {
-        unstash 'dist'
-        sh 'docker build -t $DOCKER_PUSH_URL/frontend .'
-        sh 'docker login -u $DOCKER_PUSH_USR -p $DOCKER_PUSH_PSW $DOCKER_PUSH_URL'
-        sh 'docker push $DOCKER_PUSH_URL/frontend'
+        withDockerRegistry([ credentialsId: "	dockerhub", url: "https://cloud.docker.com/u/vishnuprasadnarayanan/repository/docker/vishnuprasadnarayanan/docker_images" ]) {
+          sh 'docker push brightbox/terraform:latest'
+          sh 'docker push brightbox/cli:latest'
+        }
       }
     }
   }
