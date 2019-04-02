@@ -1,46 +1,67 @@
 pipeline {
-  environment {
-    registry = "vishnuprasadnarayanan/docker_images"
-    registryCredential = 'dockerhub'
-    dockerImage = ''
-  }
-  agent any
-  tools {nodejs "node" }
+  agent none
   stages {
-    stage('Cloning Git') {
+    stage('Fetch dependencies') {
+      agent {
+        docker 'circleci/node:9.3-stretch-browsers'
+      }
       steps {
-        git 'https://github.com/KyrosTeam/Docker-Build.git'
+        sh 'yarn'
+        stash includes: 'node_modules/', name: 'node_modules'
       }
     }
-    stage('Build') {
-       steps {
-         sh 'npm install'
-       }
-    }
-    stage('Test') {
+    stage('Lint') {
+      agent {
+        docker 'circleci/node:9.3-stretch-browsers'
+      }
       steps {
-        sh 'npm test'
+        unstash 'node_modules'
+        sh 'yarn lint'
       }
     }
-    stage('Building image') {
-      steps{
-        script {
-          dockerImage = docker.build registry + ":$BUILD_NUMBER"
-        }
+    stage('Unit Test') {
+      agent {
+        docker 'circleci/node:9.3-stretch-browsers'
+      }
+      steps {
+        unstash 'node_modules'
+        sh 'yarn test:ci'
+        junit 'reports/**/*.xml'
       }
     }
-    stage('Deploy Image') {
-      steps{
-         script {
-            docker.withRegistry( '', registryCredential ) {
-            dockerImage.push()
-          }
-        }
+    stage('E2E Test') {
+      agent {
+        docker 'circleci/node:9.3-stretch-browsers'
+      }
+      steps {
+        unstash 'node_modules'
+        sh 'mkdir -p reports'
+        sh 'yarn e2e:pre-ci'
+        sh 'yarn e2e:ci'
+        sh 'yarn e2e:post-ci'
+        junit 'reports/**/*.xml'
       }
     }
-    stage('Remove Unused docker image') {
-      steps{
-        sh "docker rmi $registry:$BUILD_NUMBER"
+    stage('Compile') {
+      agent {
+        docker 'circleci/node:9.3-stretch-browsers'
+      }
+      steps {
+        unstash 'node_modules'
+        sh 'yarn build:prod'
+        stash includes: 'dist/', name: 'dist'
+      }
+    }
+    stage('Build and Push Docker Image') {
+      agent any
+      environment {
+        DOCKER_PUSH = credentials('docker_push')
+      }
+      steps {
+        unstash 'dist'
+        sh 'docker build -t $DOCKER_PUSH_URL/frontend .'
+        sh 'docker login -u $DOCKER_PUSH_USR -p $DOCKER_PUSH_PSW $DOCKER_PUSH_URL'
+        sh 'docker push $DOCKER_PUSH_URL/frontend'
       }
     }
   }
