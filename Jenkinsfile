@@ -1,25 +1,10 @@
-node {
-    stage('Build') {
-        sh 'make' 
-        archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true 
+pipeline {
+    agent { docker { image 'node:6.3' } }
+    stages {
+        stage('build') {
+            steps {
+                sh 'npm --version'
+            }
+        }
     }
-    stage('Test') {
-            steps {
-                /* `make check` returns non-zero on test failures,
-                * using `true` to allow the Pipeline to continue nonetheless
-                */
-                sh 'make check || true' 
-                junit '**/target/*.xml' 
-            }
-        }
-    stage('Deploy') {
-            when {
-              expression {
-                currentBuild.result == null || currentBuild.result == 'SUCCESS' 
-              }
-            }
-            steps {
-                sh 'make publish'
-            }
-        }
 }
