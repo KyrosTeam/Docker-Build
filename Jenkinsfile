@@ -1,5 +1,5 @@
 node {
-    def "medium-angular-docker"
+    def projectname = "medium-angular-docker"
 
     stage('Clone repository') {
         /* Let's make sure we have the repository cloned to our workspace */
