@@ -2,7 +2,9 @@
 ### STAGE 1: Build ###
 
 # We label our stage as ‘builder’
-FROM node:alpine AS builder
+FROM jenkins/jenkins:lts
+
+USER root
 
 COPY package.json package-lock.json ./
 
@@ -29,3 +31,5 @@ WORKDIR /usr/share/nginx/html
 
 ## From ‘builder’ stage copy over the artifacts in dist folder to default nginx public folder
 COPY --from=builder /ng-app/dist /usr/share/nginx/html
+
+USER jenkins
