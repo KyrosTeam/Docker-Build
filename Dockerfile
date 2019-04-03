@@ -4,6 +4,8 @@
 # We label our stage as ‘builder’
 FROM jenkins/jenkins:lts
 
+USER root
+
 COPY package.json package-lock.json ./
 
 ## Storing node modules on a separate layer will prevent unnecessary npm installs at each build
