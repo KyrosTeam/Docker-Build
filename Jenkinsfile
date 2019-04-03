@@ -11,14 +11,14 @@ node {
         /* This builds the actual image; synonymous to
          * docker build on the command line */
 
-        medium-angular-docker = docker.build("getintodevops/hellonode")
+      projectname = docker.build("getintodevops/hellonode")
     }
 
     stage('Test image') {
         /* Ideally, we would run a test framework against our image.
          * For this example, we're using a Volkswagen-type approach ;-) */
 
-        medium-angular-docker.inside {
+        projectname.inside {
             bat 'echo "Tests passed"'
         }
     }
@@ -29,8 +29,8 @@ node {
          * Second, the 'latest' tag.
          * Pushing multiple tags is cheap, as all the layers are reused. */
         docker.withRegistry('https://registry.hub.docker.com', '88a033d8-66fc-41f2-9f66-a30f59edd008') {
-            medium-angular-docker.push("${env.BUILD_NUMBER}")
-            medium-angular-docker.push("latest")
+            projectname.push("${env.BUILD_NUMBER}")
+            projectname.push("latest")
         }
     }
 }
