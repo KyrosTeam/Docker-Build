@@ -8,11 +8,9 @@ USER root
 
 COPY package.json package-lock.json ./
 
-RUN npm install reinstall -g
-
 ## Storing node modules on a separate layer will prevent unnecessary npm installs at each build
 
-RUN npm ci && mkdir /ng-app && mv ./node_modules ./ng-app
+RUN npm i && mkdir /ng-app && mv ./node_modules ./ng-app
 
 WORKDIR /ng-app
 
