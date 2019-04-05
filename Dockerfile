@@ -8,6 +8,9 @@ USER root
 
 COPY package.json package-lock.json ./
 
+RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+
+RUN apt-get install -y nodejs
 ## Storing node modules on a separate layer will prevent unnecessary npm installs at each build
 
 RUN npm ci && mkdir /ng-app && mv ./node_modules ./ng-app
